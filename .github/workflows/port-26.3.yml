@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f versions/26.3/gradle.properties ]; then
+          if [ ! -f versions/26.3/gradle.properties ] || [ ! -f versions/26.3/build.gradle ] || [ ! -x versions/26.3/gradlew ]; then
             rm -rf versions/26.3
             cp -a versions/26.2 versions/26.3
           fi
