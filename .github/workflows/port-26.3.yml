@@ -30,6 +30,9 @@ jobs:
             rm -rf versions/26.3
             cp -a versions/26.2 versions/26.3
           fi
+          if [ ! -f versions/26.3/gradle/wrapper/gradle-wrapper.jar ] && [ -f versions/26.2/gradle/wrapper/gradle-wrapper.jar ]; then
+            cp versions/26.2/gradle/wrapper/gradle-wrapper.jar versions/26.3/gradle/wrapper/gradle-wrapper.jar
+          fi
           python3 - <<'PY'
           from pathlib import Path
           import json
