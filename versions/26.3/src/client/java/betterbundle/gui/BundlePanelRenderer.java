@@ -142,7 +142,14 @@ public final class BundlePanelRenderer {
         int leftSpace = leftPos - SCREEN_MARGIN - PANEL_GAP;
         int rightSpace = screenWidth - (leftPos + imageWidth)
                 - SCREEN_MARGIN - PANEL_GAP;
-        int available = isRecipeBookOpen() ? rightSpace : Math.max(leftSpace, rightSpace);
+
+        // The HUD is anchored to the left side. Use the actual left-side
+        // space for the column count even when the vanilla recipe book is open.
+        int available = Math.max(0, leftSpace);
+        if (available < 1) {
+            available = Math.max(0, rightSpace);
+        }
+
         int fixedWidth = PADDING + CAT_BAR_WIDTH + CATEGORY_GAP
                 + SCROLL_BAR_WIDTH + SCROLL_GAP + PADDING;
         int columns = (available - fixedWidth + SLOT_SPACING)
@@ -193,20 +200,13 @@ public final class BundlePanelRenderer {
                 ? screen.imageWidth
                 : 176;
         int width = panelWidth(leftPos);
-        int right = leftPos + imageWidth + PANEL_GAP;
         int immediateLeft = leftPos - width - PANEL_GAP;
-        int leftSpace = leftPos - SCREEN_MARGIN;
-        int rightSpace = screenWidth - (leftPos + imageWidth) - SCREEN_MARGIN;
 
-        if (isRecipeBookOpen()) {
-            return Math.clamp(right, SCREEN_MARGIN,
-                    Math.max(SCREEN_MARGIN, screenWidth - width - SCREEN_MARGIN));
-        }
-
-        if (leftSpace >= rightSpace && immediateLeft >= SCREEN_MARGIN) return immediateLeft;
-        if (right + width <= screenWidth - SCREEN_MARGIN) return right;
-        if (immediateLeft >= SCREEN_MARGIN) return immediateLeft;
-        return Math.clamp(immediateLeft, SCREEN_MARGIN,
+        // Keep the HUD on the left side of the vanilla/container UI.
+        // Clamp only when the screen is too narrow to fit it there.
+        return Math.clamp(
+                immediateLeft,
+                SCREEN_MARGIN,
                 Math.max(SCREEN_MARGIN, screenWidth - width - SCREEN_MARGIN));
     }
 
