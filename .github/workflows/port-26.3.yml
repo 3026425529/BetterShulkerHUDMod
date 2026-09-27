@@ -125,3 +125,5 @@ jobs:
             git commit -m 'chore: update Minecraft 26.3 port'
             git push origin HEAD:26.3
           fi
+
+# Trigger a fresh 26.3 build after BundleContents API migration.
