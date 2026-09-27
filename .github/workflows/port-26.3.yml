@@ -26,7 +26,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -d versions/26.3 ]; then
+          if [ ! -f versions/26.3/gradle.properties ]; then
+            rm -rf versions/26.3
             cp -a versions/26.2 versions/26.3
           fi
           python3 - <<'PY'
@@ -41,8 +42,8 @@ jobs:
           if 'maven { url \'https://cursemaven.com\' }' not in s: s=s.replace('    mavenCentral()', "    mavenCentral()\n    maven { url 'https://cursemaven.com' }")
           for a,b in [('quickshulker:3.0.2-26.2','quickshulker:3.1.0-26.3'),("compileOnly('me.shedaniel:RoughlyEnoughItems-api:26.2.821')",'// REI optional on 26.3'),("compileOnly('mezz.jei:jei-26.2-fabric-api:30.15.0.118')","compileOnly('curse.maven:jei-238222:8918191')"),('malilib-fabric-26.2:0.29.0','malilib-fabric-26.3:0.30.1')]: s=s.replace(a,b)
           p.write_text(s)
-          p = Path('versions/26.3/src/client/java/bettershulkerhud/compat/ReiExclusionPlugin.java')
-          if p.exists(): p.unlink()
+          for p in Path('versions/26.3').rglob('ReiExclusionPlugin.java'):
+              p.unlink()
           p = Path('versions/26.3/src/main/java/bettershulkerhud/server/BundleStorageAccess.java')
           if p.exists():
               s=p.read_text().replace('itemCopyStream()', 'itemCopies()').replace('new BundleContents.Mutable(contents)', 'contents.asMutable()')
@@ -50,8 +51,8 @@ jobs:
           p = Path('versions/26.3/src/main/resources/fabric.mod.json')
           if p.exists():
               data=json.loads(p.read_text()); data['depends']['minecraft']='>=26.3 <26.4'; data['depends']['fabricloader']='>=0.19.5'; data['recommends']['malilib']='>=0.30.0 <0.31.0'; data['suggests']['quickshulker']='3.1.0-26.3'; data['entrypoints'].pop('rei_client',None); p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-          p = Path('versions/26.3/src/client/resources/better-shulker-hud.client.mixins.json')
-          if p.exists(): p.write_text(p.read_text().replace('26.2','26.3'))
+          for p in Path('versions/26.3').rglob('*.mixins.json'):
+              p.write_text(p.read_text().replace('26.2','26.3'))
           p = Path('versions/26.3/settings.gradle')
           if p.exists(): p.write_text(p.read_text().replace('26.2','26.3'))
           PY
