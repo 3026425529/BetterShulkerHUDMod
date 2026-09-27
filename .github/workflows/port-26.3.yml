@@ -69,7 +69,8 @@ jobs:
               'GLFW_KEY_LEFT_ALT':'KEY_LALT', 'GLFW_KEY_RIGHT_ALT':'KEY_RALT',
               'GLFW_KEY_ENTER':'KEY_RETURN', 'GLFW_KEY_KP_ENTER':'KEYCODE_NUMPADENTER'
           }
-          for p in Path('versions/26.3/src/client/java').rglob('*.java'):
+          # Apply API migration to every Java source, not only src/client/java.
+          for p in Path('versions/26.3/src').rglob('*.java'):
               s = p.read_text()
               if 'org.lwjgl.glfw.GLFW' in s:
                   s = s.replace('import org.lwjgl.glfw.GLFW;', 'import com.mojang.blaze3d.platform.InputConstants;')
