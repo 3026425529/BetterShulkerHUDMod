@@ -8,58 +8,88 @@ permissions:
   contents: write
 
 jobs:
-  bootstrap:
-    if: ${{ !startsWith(github.event.head_commit.message, 'chore: bootstrap generated 26.3') }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Create 26.3 source tree
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Create or update 26.3 source tree
         shell: bash
         run: |
           set -euo pipefail
-          if [ -d versions/26.3 ]; then
-            echo 'versions/26.3 already exists; nothing to bootstrap.'
-            exit 0
+          if [ ! -d versions/26.3 ]; then
+            cp -a versions/26.2 versions/26.3
           fi
-          cp -a versions/26.2 versions/26.3
           python3 - <<'PY'
           from pathlib import Path
           p = Path('versions/26.3/gradle.properties')
           s = p.read_text()
-          s = s.replace('minecraft_version=26.2', 'minecraft_version=26.3')
-          s = s.replace('loader_version=0.19.3', 'loader_version=0.19.5')
-          s = s.replace('loom_version=1.16.3', 'loom_version=1.17.21')
-          s = s.replace('artifact_minecraft_version=26.2.x', 'artifact_minecraft_version=26.3')
-          s = s.replace('fabric_api_version=0.156.0+26.2', 'fabric_api_version=0.161.0+26.3')
+          for a,b in [
+              ('minecraft_version=26.2','minecraft_version=26.3'),
+              ('loader_version=0.19.3','loader_version=0.19.5'),
+              ('loom_version=1.16.3','loom_version=1.17.21'),
+              ('artifact_minecraft_version=26.2.x','artifact_minecraft_version=26.3'),
+              ('fabric_api_version=0.156.0+26.2','fabric_api_version=0.161.0+26.3'),
+          ]: s=s.replace(a,b)
           p.write_text(s)
 
           p = Path('versions/26.3/build.gradle')
           s = p.read_text()
-          s = s.replace('quickshulker:3.0.2-26.2', 'quickshulker:3.1.0-26.3')
-          s = s.replace('RoughlyEnoughItems-api:26.2.821', 'RoughlyEnoughItems-api:26.3')
-          s = s.replace('jei-26.2-fabric-api:30.15.0.118', 'jei-26.3-fabric-api:31.0.0')
-          s = s.replace('malilib-fabric-26.2:0.29.0', 'malilib-fabric-26.3:0.30.1')
+          for a,b in [
+              ('quickshulker:3.0.2-26.2','quickshulker:3.1.0-26.3'),
+              ('RoughlyEnoughItems-api:26.2.821','RoughlyEnoughItems-api:26.3'),
+              ('jei-26.2-fabric-api:30.15.0.118','jei-26.3-fabric-api:31.0.0'),
+              ('malilib-fabric-26.2:0.29.0','malilib-fabric-26.3:0.30.1'),
+          ]: s=s.replace(a,b)
           p.write_text(s)
 
-          p = Path('versions/26.3/settings.gradle')
-          if p.exists():
-            s = p.read_text().replace('26.2', '26.3')
-            p.write_text(s)
+          for name in ('settings.gradle','fabric.mod.json'):
+            p = Path('versions/26.3')/name
+            if p.exists():
+              p.write_text(p.read_text().replace('26.2','26.3'))
           PY
 
+      - name: Set Gradle 9.6
+        shell: bash
+        run: |
+          set -euo pipefail
           cd versions/26.3
+          sed -i 's#gradle-[0-9][^/]*/bin/gradle-[^/]*-bin.zip#gradle-9.6.0-bin.zip#' gradle/wrapper/gradle-wrapper.properties || true
+          sed -i 's#gradle-[0-9.]*-bin.zip#gradle-9.6.0-bin.zip#' gradle/wrapper/gradle-wrapper.properties || true
           chmod +x gradlew
-          ./gradlew wrapper --gradle-version 9.6.0 --no-daemon
 
-      - name: Commit generated source tree
+      - name: Build 26.3
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd versions/26.3
+          ./gradlew build --no-daemon --stacktrace
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: BetterShulkerHUD-26.3
+          path: versions/26.3/build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Commit generated 26.3 tree
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add versions/26.3
-          git commit -m 'chore: bootstrap generated 26.3 source tree'
-          git push origin HEAD:26.3
+          if git diff --cached --quiet; then
+            echo 'No generated source changes to commit.'
+          else
+            git commit -m 'chore: update Minecraft 26.3 port'
+            git push origin HEAD:26.3
+          fi
