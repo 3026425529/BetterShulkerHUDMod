@@ -76,7 +76,7 @@ jobs:
                   s = s.replace('import org.lwjgl.glfw.GLFW;', 'import com.mojang.blaze3d.platform.InputConstants;')
                   for a,b in glfw_map.items(): s=s.replace('GLFW.'+a, 'InputConstants.'+b)
               s = s.replace('.itemCopyStream()', '.itemCopies()')
-          s = s.replace('new BundleContents.Mutable(\n                    bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY))', 'bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).asMutable()')
+              s = s.replace('new BundleContents.Mutable(\n                    bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY))', 'bundle.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).asMutable()')
               s = re.sub(r'new BundleContents\.Mutable\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)', r'\1.asMutable()', s)
               p.write_text(s)
 
