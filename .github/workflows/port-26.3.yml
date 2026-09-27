@@ -33,6 +33,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json
+          import re
           p = Path('versions/26.3/gradle.properties')
           s = p.read_text()
           for a,b in [('minecraft_version=26.2','minecraft_version=26.3'),('loader_version=0.19.3','loader_version=0.19.5'),('loom_version=1.16.3','loom_version=1.17.21'),('artifact_minecraft_version=26.2.x','artifact_minecraft_version=26.3'),('fabric_api_version=0.156.0+26.2','fabric_api_version=0.161.0+26.3')]: s=s.replace(a,b)
@@ -55,6 +56,42 @@ jobs:
               p.write_text(p.read_text().replace('26.2','26.3'))
           p = Path('versions/26.3/settings.gradle')
           if p.exists(): p.write_text(p.read_text().replace('26.2','26.3'))
+
+          # 26.3 switched Minecraft's low-level input layer from GLFW to SDL3.
+          glfw_map = {
+              'GLFW_MOUSE_BUTTON_LEFT':'MOUSE_BUTTON_LEFT', 'GLFW_MOUSE_BUTTON_RIGHT':'MOUSE_BUTTON_RIGHT',
+              'GLFW_MOUSE_BUTTON_MIDDLE':'MOUSE_BUTTON_MIDDLE', 'GLFW_MOD_SHIFT':'MOD_SHIFT',
+              'GLFW_MOD_CONTROL':'MOD_CONTROL', 'GLFW_MOD_ALT':'MOD_ALT',
+              'GLFW_KEY_BACKSPACE':'KEY_BACKSPACE', 'GLFW_KEY_ESCAPE':'KEY_ESCAPE',
+              'GLFW_KEY_SPACE':'KEY_SPACE', 'GLFW_KEY_V':'KEY_V', 'GLFW_KEY_CAPS_LOCK':'KEY_CAPSLOCK',
+              'GLFW_KEY_LEFT_SHIFT':'KEY_LSHIFT', 'GLFW_KEY_RIGHT_SHIFT':'KEY_RSHIFT',
+              'GLFW_KEY_LEFT_CONTROL':'KEY_LCONTROL', 'GLFW_KEY_RIGHT_CONTROL':'KEY_RCONTROL',
+              'GLFW_KEY_LEFT_ALT':'KEY_LALT', 'GLFW_KEY_RIGHT_ALT':'KEY_RALT',
+              'GLFW_KEY_ENTER':'KEY_RETURN', 'GLFW_KEY_KP_ENTER':'KEYCODE_NUMPADENTER'
+          }
+          for p in Path('versions/26.3/src/client/java').rglob('*.java'):
+              s = p.read_text()
+              if 'org.lwjgl.glfw.GLFW' in s:
+                  s = s.replace('import org.lwjgl.glfw.GLFW;', 'import com.mojang.blaze3d.platform.InputConstants;')
+                  for a,b in glfw_map.items(): s=s.replace('GLFW.'+a, 'InputConstants.'+b)
+              s = s.replace('.itemCopyStream()', '.itemCopies()')
+              s = re.sub(r'new BundleContents\.Mutable\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)', r'\1.asMutable()', s)
+              p.write_text(s)
+
+          p = Path('versions/26.3/src/client/java/betterbundle/mixin/ItemScrollerInputHandlerMixin.java')
+          if p.exists():
+              s=p.read_text().replace('import fi.dy.masa.malilib.util.InputUtils;\n','')
+              s=s.replace('InputUtils.getMouseX()', '(int) client.mouseHandler.xpos()')
+              s=s.replace('InputUtils.getMouseY()', '(int) client.mouseHandler.ypos()')
+              p.write_text(s)
+
+          p = Path('versions/26.3/src/client/java/betterbundle/compat/QuickShulkerExtractionController.java')
+          if p.exists():
+              s=p.read_text()
+              s=s.replace('GLFW.glfwGetCursorPos(window, cursorX, cursorY);', 'cursorX[0] = Minecraft.getInstance().mouseHandler.xpos(); cursorY[0] = Minecraft.getInstance().mouseHandler.ypos();')
+              s=s.replace('GLFW.glfwSetCursorPos(window, cursorX[0], cursorY[0]);', '// SDL3 cursor warp is intentionally omitted on 26.3')
+              s=s.replace('import org.lwjgl.glfw.GLFW;\n','')
+              p.write_text(s)
           PY
 
       - name: Set Gradle 9.6
