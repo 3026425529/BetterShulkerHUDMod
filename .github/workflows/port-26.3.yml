@@ -45,17 +45,23 @@ jobs:
 
           p = Path('versions/26.3/build.gradle')
           s = p.read_text()
-          if "maven { url 'https://cursemaven.com' }" not in s:
+          for line in [
+              'sourceSets.client.java.exclude("bettershulkerhud/compat/ReiExclusionPlugin.java")',
+              'sourceSets.client.resources.exclude("better-shulker-hud.client.mixins.json")',
+          ]:
+              s=s.replace(line+'\n\n','')
+          if 'bettershulkerhud/compat/ReiExclusionPlugin.java' not in s:
               s=s.replace("    mavenCentral()", "    mavenCentral()\n    maven { url 'https://cursemaven.com' }")
-          if 'sourceSets.client.java.exclude' not in s:
-              s=s.replace('loom {', 'sourceSets.client.java.exclude("bettershulkerhud/compat/ReiExclusionPlugin.java")\n\nloom {')
           for a,b in [
               ('quickshulker:3.0.2-26.2','quickshulker:3.1.0-26.3'),
-              ("compileOnly('me.shedaniel:RoughlyEnoughItems-api:26.2.821')", "// REI has no published 26.3 Maven artifact yet; its optional plugin is excluded from this build."),
+              ("compileOnly('me.shedaniel:RoughlyEnoughItems-api:26.2.821')", "// REI has no published 26.3 Maven artifact yet; its optional plugin is disabled for this build."),
               ("compileOnly('mezz.jei:jei-26.2-fabric-api:30.15.0.118')", "compileOnly('curse.maven:jei-238222:8918191')"),
               ('malilib-fabric-26.2:0.29.0','malilib-fabric-26.3:0.30.1'),
           ]: s=s.replace(a,b)
           p.write_text(s)
+
+          p = Path('versions/26.3/src/client/java/bettershulkerhud/compat/ReiExclusionPlugin.java')
+          if p.exists(): p.unlink()
 
           p = Path('versions/26.3/src/main/resources/fabric.mod.json')
           if p.exists():
@@ -73,8 +79,7 @@ jobs:
               p.write_text(p.read_text().replace('26.2','26.3'))
 
           p = Path('versions/26.3/settings.gradle')
-          if p.exists():
-              p.write_text(p.read_text().replace('26.2','26.3'))
+          if p.exists(): p.write_text(p.read_text().replace('26.2','26.3'))
           PY
 
       - name: Set Gradle 9.6
